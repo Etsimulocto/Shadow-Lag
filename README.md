@@ -28,12 +28,17 @@ Everything is drawn in chalk. You leave a chalk line as you move, and your shado
 | Erase trail | B · LB · LT | Shift · K · E |
 | Pause | Start | Esc · P |
 | Menus | Stick / D-pad + A | Arrows + Enter |
+| Music on/off | Select / Back | M |
 
 You'll get rumble if your controller supports it.
 
 ## Run it
 
 It's one file, `index.html`. Open it in a browser and play. No build step, no dependencies (it uses Google Fonts if they're reachable).
+
+## Music
+
+**"Three Seconds Behind"** (`audio/three-seconds-behind.mp3`) loops in the background. Browsers only allow audio after you interact, so it starts on your first key press or click. It gets quieter when you pause or lose, and your mute setting is remembered.
 
 ## Art
 

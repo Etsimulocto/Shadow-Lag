@@ -172,6 +172,7 @@ const clearDust = () => dctx.clearRect(0, 0, W, H);
 /* ---------- audio ---------- */
 let AC = null, master = null, noiseBuf = null;
 function initAudio() {
+  startMusic();
   if (AC) { if (AC.state === 'suspended') AC.resume().catch(() => {}); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
@@ -209,6 +210,30 @@ const SFX = {
   nope() { sTone(220, 180, .1, 'square', .06); }
 };
 
+/* ---------- music: "Three Seconds Behind" ---------- */
+const music = new Audio('audio/three-seconds-behind.mp3');
+music.loop = true; music.preload = 'auto'; music.volume = 0;
+let musicOn = true, musicBlocked = false, musicMissing = false;
+try { musicOn = localStorage.getItem('shadowlag_music') !== 'off'; } catch (e) {}
+music.addEventListener('error', () => { musicMissing = true; });
+function startMusic() {
+  if (!musicOn || musicMissing || !music.paused) return;
+  const p = music.play();
+  if (p && p.then) p.then(() => { musicBlocked = false; }).catch(() => { musicBlocked = true; });
+}
+function toggleMusic() {
+  musicOn = !musicOn;
+  try { localStorage.setItem('shadowlag_music', musicOn ? 'on' : 'off'); } catch (e) {}
+  if (musicOn) startMusic(); else music.pause();
+  showToast(musicOn ? '♪ music on' : 'music off');
+}
+const MUSIC_VOL = { title: 0.6, play: 0.45, pause: 0.18, clear: 0.6, over: 0.25 };
+function updateMusic(dt) {
+  if (music.paused) return;
+  const target = MUSIC_VOL[state] ?? 0.45;
+  music.volume = clamp(music.volume + (target - music.volume) * Math.min(1, dt * 3), 0, 1);
+}
+
 /* ---------- input: keyboard + gamepad ---------- */
 const keys = new Set(), keyEdge = new Set();
 let pointerTap = false;
@@ -220,7 +245,10 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('pointerdown', () => { initAudio(); pointerTap = true; });
 addEventListener('blur', () => { keys.clear(); if (state === 'play') setState('pause'); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') setState('pause'); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (state === 'play') setState('pause'); music.pause(); }
+  else if (musicOn && !musicBlocked && !musicMissing) music.play().catch(() => {});
+});
 
 let padIndex = -1, padPrev = [], padNow = [], padAxes = [0, 0], padName = '';
 let toast = null;
@@ -768,10 +796,19 @@ function controlsText(y) {
     : ['move: WASD / arrows', 'dash: space · J', 'erase trail: shift · K · E', 'pause: esc · P'];
   lines.forEach((l, i) => chalkText(l, W / 2 - 330 + (i % 2) * 660 * 0 + (i % 2 ? 360 : 0), y + Math.floor(i / 2) * 34, 26, 'white', FONT_B, 'left', 0.8, 400));
 }
+function drawMusicTag(x, y) {
+  if (musicMissing) return;
+  const key = padIndex >= 0 ? 'select' : 'M';
+  const msg = !musicOn ? `music off — ${key} to turn on`
+    : musicBlocked ? 'click or press a key to start the music'
+    : `♪ Three Seconds Behind — ${key} to mute`;
+  chalkText(msg, x, y, 20, musicOn ? 'pink' : 'grey', FONT_B, 'left', 0.75, 400);
+}
 function drawPause() {
   dim(); chalkText('paused', W / 2, 190, 86, 'white');
   drawMenu(['resume', 'restart', 'quit to title'], 320);
   controlsText(560);
+  drawMusicTag(64, H - 34);
 }
 function drawClear() {
   dim(); const a = clamp(stateT * 3, 0, 1);
@@ -808,6 +845,7 @@ function drawTitle() {
   chalkText(padIndex >= 0 ? '🎮 gamepad ready' : 'gamepad? plug it in & press any button', 64, 44, 22, padIndex >= 0 ? 'green' : 'grey', FONT_B, 'left', 0.9, 400);
   if (best > 0) chalkText('best ' + best, W - 64, 44, 26, 'white', FONT_B, 'right', 0.8, 400);
   chalkText('QuarterbitGames', W - 64, H - 34, 20, 'grey', FONT_B, 'right', 0.6, 400);
+  drawMusicTag(64, H - 34);
 }
 function drawToast() {
   if (!toast || toast.t > 2.6) return;
@@ -845,6 +883,8 @@ function frame(now) {
   if (padNow.some((b, i) => b && !padPrev[i])) initAudio();
   const [mx, my] = inputMove();
   stateT += dt; if (toast) toast.t += dt;
+  if (ke('KeyM') || pe(8)) toggleMusic();
+  updateMusic(dt);
 
   if (state === 'title') {
     titleDemo(dt);
@@ -879,7 +919,7 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // tiny hook for automated playtests
-window.__shadowlag = { get state() { return state; }, get G() { return G; }, startLevel };
+window.__shadowlag = { get state() { return state; }, get G() { return G; }, startLevel, get music() { return music; } };
 </script>
 </body>
 </html>
