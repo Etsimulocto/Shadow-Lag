@@ -1,3 +1,5 @@
+![Shadow Lag](art/cover.png)
+
 # Shadow Lag
 
 *A QuarterbitGames original.*
@@ -32,3 +34,7 @@ You'll get rumble if your controller supports it.
 ## Run it
 
 It's one file, `index.html`. Open it in a browser and play. No build step, no dependencies (it uses Google Fonts if they're reachable).
+
+## Art
+
+In `art/`: `cover.png` (1600×900 key art), `banner.png` (920×430 store banner), and `icon-1024/512/256/128/64.png` (app icon with transparent rounded corners).
